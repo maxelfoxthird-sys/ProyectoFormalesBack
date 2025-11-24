@@ -1,0 +1,102 @@
+# -*- coding: utf-8 -*-
+"""
+TEST DEL ANALIZADOR SINTÁCTICO (PROYECTO JWT)
+--------------------------------------------
+Archivo temporal para probar el analizador sintáctico.
+"""
+
+try:
+    from app.analyzer.syntactic_analyzer import analyze_syntax
+except ModuleNotFoundError:
+    # When this file is run directly from the repository root (or other CWD),
+    # the package `app` may not be on sys.path. Add the `backend` folder
+    # dynamically so the absolute import works.
+    import os
+    import sys
+
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+
+    from app.analyzer.syntactic_analyzer import analyze_syntax
+
+# ------------------------------
+# CASOS DEL ENUNCIADO (DECODER)
+# ------------------------------
+
+cases = {
+    "case1": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"sub\":\"foo\",\"name\":\"John Doe\"}"
+    },
+    "case2": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"iss\":\"https://api.mi-proyecto.com\",\"sub\":\"auth0|1234567890\",\"aud\":\"https://api.mi-proyecto.com/v1\",\"iat\":1762956000,\"exp\":1762959600,\"nbf\":1762956000,\"jti\":\"abc-def-123\",\"username\":\"jose.salamanca\",\"role\":\"admin\"}"
+    },
+    "case3": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"iss\":\"https://api.mi-proyecto.com\",\"sub\":\"auth0|0987654321\",\"aud\":\"https://api.mi-proyecto.com/v1\",\"iat\":1762948800,\"exp\":1762952400,\"nbf\":1762948800,\"jti\":\"ghi-jkl-456\",\"username\":\"samuel.user\",\"role\":\"user\"}"
+    },
+    "case4": {
+        "header": "{\"alg\":\"HS384\",\"typ\":\"JWT\"}",
+        "payload": "{\"iss\":\"https://auth.mi-proyecto.com\",\"sub\":\"google-oauth2|1122334455\",\"aud\":[\"https://api.mi-proyecto.com/v1\",\"https://admin.mi-proyecto.com\"],\"iat\":1762956000,\"exp\":1762959600,\"jti\":\"mno-pqr-789\",\"email\":\"test@gmail.com\",\"permissions\":[\"read:data\",\"write:data\"]}"
+    },
+}
+
+# ------------------------------
+# CASOS INTENCIONALMENTE INVÁLIDOS
+# ------------------------------
+
+invalid_cases = {
+    "invalid_typ": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWP\"}",
+        "payload": "{\"name\":\"John\"}"
+    },
+    "invalid_header_json": {
+        "header": "{\"alg\":123,,}",
+        "payload": "{\"ok\":true}"
+    },
+    "invalid_payload_json": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"ok\": bad_value }"
+    },
+    "missing_alg": {
+        "header": "{\"typ\":\"JWT\"}",
+        "payload": "{\"name\":\"Test\"}"
+    },
+    "invalid_time": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"iat\":\"no_numero\"}"
+    },
+    "invalid_permissions": {
+        "header": "{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+        "payload": "{\"permissions\": [1,2,3]}"
+    },
+}
+
+# ------------------------------
+# EJECUCIÓN DE PRUEBAS
+# ------------------------------
+
+def print_result(name, result):
+    print("\n========== RESULTADO:", name, "==========")
+    print("Valid:", result["valid"])
+    print("Errors:", result["errors"])
+    print("Header:", result["header"])
+    print("Payload:", result["payload"])
+
+print("\n=====================")
+print("PRUEBAS CON JSON VÁLIDOS")
+print("=====================")
+
+for name, data in cases.items():
+    print_result(name, analyze_syntax(data["header"], data["payload"]))
+
+print("\n=====================")
+print("PRUEBAS CON ERRORES (SE ESPERA QUE FALLEN)")
+print("=====================")
+
+for name, data in invalid_cases.items():
+    print_result(name, analyze_syntax(data["header"], data["payload"]))
+
+

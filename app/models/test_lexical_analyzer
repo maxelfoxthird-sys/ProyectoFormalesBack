@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+"""
+TEST DEL ANALIZADOR LÉXICO (PROYECTO JWT)
+-----------------------------------------
+Archivo temporal para probar el analizador léxico.
+"""
+
+try:
+    from app.analyzer.lexical_analyzer import JWTLexer
+except ModuleNotFoundError:
+    # When this file is run directly from the repository root (or other CWD),
+    # the package `app` may not be on sys.path. Add the `backend` folder
+    # dynamically so the absolute import works.
+    import os
+    import sys
+
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+
+    from app.analyzer.lexical_analyzer import JWTLexer
+
+# ------------------------------
+# CASOS VÁLIDOS (TOKENS JWT COMPLETOS)
+# ------------------------------
+
+# Tokens JWT válidos en formato Base64URL (header.payload.signature)
+valid_cases = {
+    "case1": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmb28iLCJuYW1lIjoiSm9obiBEb2UifQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+    "case2": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5taS1wcm95ZWN0by5jb20iLCJzdWIiOiJhdXRoMHwxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly9hcGkubWktcHJveWVjdG8uY29tL3YxIiwiaWF0IjoxNzYyOTU2MDAwLCJleHAiOjE3NjI5NTk2MDAsIm5iZiI6MTc2Mjk1NjAwMCwianRpIjoiYWJjLWRlZi0xMjMiLCJ1c2VybmFtZSI6Impvc2Uuc2FsYW1hbmNhIiwicm9sZSI6ImFkbWluIn0.signature123",
+    "case3": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5taS1wcm95ZWN0by5jb20iLCJzdWIiOiJhdXRoMHwwOTg3NjU0MzIxIiwiYXVkIjoiaHR0cHM6Ly9hcGkubWktcHJveWVjdG8uY29tL3YxIiwiaWF0IjoxNzYyOTQ4ODAwLCJleHAiOjE3NjI5NTI0MDAsIm5iZiI6MTc2Mjk0ODgwMCwianRpIjoiZ2hpLWprbC00NTYiLCJ1c2VybmFtZSI6InNhbXVlbC51c2VyIiwicm9sZSI6InVzZXIifQ.signature456",
+    "case4": "eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGgubWktcHJveWVjdG8uY29tIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTIyMzM0NDU1IiwiYXVkIjpbImh0dHBzOi8vYXBpLm1pLXByb3llY3RvLmNvbS92MSIsImh0dHBzOi8vYWRtaW4ubWktcHJveWVjdG8uY29tIl0sImlhdCI6MTc2Mjk1NjAwMCwiZXhwIjoxNzYyOTU5NjAwLCJqdGkiOiJtbm8tcHFyLTc4OSIsImVtYWlsIjoidGVzdEBnbWFpbC5jb20iLCJwZXJtaXNzaW9ucyI6WyJyZWFkOmRhdGEiLCJ3cml0ZTpkYXRhIl19.signature789",
+    "case5_minimal": "YWJj.ZGVm.Z2hp",  # Token mínimo válido
+    "case6_long_signature": "YWJj.ZGVm." + "x" * 100,  # Signature muy larga
+}
+
+# ------------------------------
+# CASOS INTENCIONALMENTE INVÁLIDOS
+# ------------------------------
+
+invalid_cases = {
+    "empty_token": "",
+    "only_header": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "header_and_payload": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmb28ifQ",
+    "starts_with_dot": ".eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmb28ifQ.signature",
+    "ends_with_dot": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmb28ifQ.signature.",
+    "double_dots": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..eyJzdWIiOiJmb28ifQ.signature",
+    "too_many_parts": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmb28ifQ.signature.extra",
+    "invalid_char_space": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 eyJzdWIiOiJmb28ifQ.signature",
+    "invalid_char_plus": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9+eyJzdWIiOiJmb28ifQ.signature",
+    "invalid_char_slash": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/eyJzdWIiOiJmb28ifQ.signature",
+    "invalid_char_equal": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9=eyJzdWIiOiJmb28ifQ.signature",
+    "invalid_char_special": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9@eyJzdWIiOiJmb28ifQ.signature",
+    "only_dots": "...",
+    "mixed_invalid_chars": "abc!def@ghi.signature",
+}
+
+# ------------------------------
+# EJECUCIÓN DE PRUEBAS
+# ------------------------------
+
+lexer = JWTLexer()
+
+def print_result(name, token, result):
+    print("\n========== RESULTADO:", name, "==========")
+    print("Token:", token[:50] + "..." if len(token) > 50 else token)
+    print("Valid:", result["valid"])
+    if result["valid"]:
+        print("Tokens:", result["tokens"])
+        print("Header:", result["header"])
+        print("Payload:", result["payload"])
+        print("Signature:", result["signature"])
+    else:
+        print("Error:", result.get("error", "Unknown error"))
+
+print("\n=====================")
+print("PRUEBAS CON TOKENS VÁLIDOS")
+print("=====================")
+
+for name, token in valid_cases.items():
+    print_result(name, token, lexer.analyze(token))
+
+print("\n=====================")
+print("PRUEBAS CON ERRORES (SE ESPERA QUE FALLEN)")
+print("=====================")
+
+for name, token in invalid_cases.items():
+    print_result(name, token, lexer.analyze(token))
+

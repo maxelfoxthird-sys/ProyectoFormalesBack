@@ -1,0 +1,190 @@
+# -*- coding: utf-8 -*-
+"""
+TEST DEL VERIFICADOR CRIPTOGRÁFICO (PROYECTO JWT)
+-------------------------------------------------
+Archivo temporal para probar el verificador criptográfico.
+"""
+
+try:
+    from app.analyzer.crypto_verifier import verify_jwt_signature
+    from app.analyzer.encoder import encode_jwt
+except ModuleNotFoundError:
+    # When this file is run directly from the repository root (or other CWD),
+    # the package `app` may not be on sys.path. Add the `backend` folder
+    # dynamically so the absolute import works.
+    import os
+    import sys
+
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+
+    from app.analyzer.crypto_verifier import verify_jwt_signature
+    from app.analyzer.encoder import encode_jwt
+
+# ------------------------------
+# CASOS VÁLIDOS (TOKENS FIRMADOS CORRECTAMENTE)
+# ------------------------------
+
+# Generar tokens válidos usando el encoder
+valid_cases = {}
+
+# Caso 1: JWT simple con HS256
+header1 = {"alg": "HS256", "typ": "JWT"}
+payload1 = {"sub": "foo", "name": "John Doe"}
+secret1 = "secret"
+jwt1 = encode_jwt(header1, payload1, secret1)
+valid_cases["case1_valid_hs256"] = {
+    "jwt": jwt1,
+    "secret": secret1,
+    "expected_valid": True
+}
+
+# Caso 2: JWT completo con HS256
+header2 = {"alg": "HS256", "typ": "JWT"}
+payload2 = {
+    "iss": "https://api.mi-proyecto.com",
+    "sub": "auth0|1234567890",
+    "aud": "https://api.mi-proyecto.com/v1",
+    "iat": 1762956000,
+    "exp": 1762959600,
+    "nbf": 1762956000,
+    "jti": "abc-def-123",
+    "username": "jose.salamanca",
+    "role": "admin"
+}
+secret2 = "my-secret-key"
+jwt2 = encode_jwt(header2, payload2, secret2)
+valid_cases["case2_valid_hs256_complex"] = {
+    "jwt": jwt2,
+    "secret": secret2,
+    "expected_valid": True
+}
+
+# Caso 3: JWT con HS384
+header3 = {"alg": "HS384", "typ": "JWT"}
+payload3 = {
+    "iss": "https://auth.mi-proyecto.com",
+    "sub": "google-oauth2|1122334455",
+    "aud": ["https://api.mi-proyecto.com/v1", "https://admin.mi-proyecto.com"],
+    "iat": 1762956000,
+    "exp": 1762959600,
+    "jti": "mno-pqr-789",
+    "email": "test@gmail.com",
+    "permissions": ["read:data", "write:data"]
+}
+secret3 = "another-secret-key"
+jwt3 = encode_jwt(header3, payload3, secret3)
+valid_cases["case3_valid_hs384"] = {
+    "jwt": jwt3,
+    "secret": secret3,
+    "expected_valid": True
+}
+
+# ------------------------------
+# CASOS INVÁLIDOS (CLAVE SECRETA INCORRECTA O TOKEN ALTERADO)
+# ------------------------------
+
+invalid_cases = {}
+
+# Caso 1: Clave secreta incorrecta
+invalid_cases["case1_wrong_secret"] = {
+    "jwt": jwt1,
+    "secret": "wrong-secret",
+    "expected_valid": False
+}
+
+# Caso 2: Token con firma alterada manualmente
+invalid_cases["case2_tampered_signature"] = {
+    "jwt": jwt2[:-10] + "XXXXXXXXXX",  # Alterar los últimos caracteres de la firma
+    "secret": secret2,
+    "expected_valid": False
+}
+
+# Caso 3: Token con payload alterado (re-encode con diferente contenido)
+header_tampered = {"alg": "HS256", "typ": "JWT"}
+payload_tampered = {"sub": "hacked", "name": "Attacker"}
+jwt_tampered = encode_jwt(header_tampered, payload_tampered, secret2)
+# Usar el header y payload del jwt2 pero con firma del jwt_tampered
+parts_jwt2 = jwt2.split('.')
+parts_tampered = jwt_tampered.split('.')
+jwt_hybrid = f"{parts_jwt2[0]}.{parts_jwt2[1]}.{parts_tampered[2]}"
+invalid_cases["case3_hybrid_token"] = {
+    "jwt": jwt_hybrid,
+    "secret": secret2,
+    "expected_valid": False
+}
+
+# Caso 4: Token con formato inválido
+invalid_cases["case4_invalid_format"] = {
+    "jwt": "not.a.valid.jwt.format",
+    "secret": secret1,
+    "expected_valid": False
+}
+
+# Caso 5: Token vacío
+invalid_cases["case5_empty_token"] = {
+    "jwt": "",
+    "secret": secret1,
+    "expected_valid": False
+}
+
+# Caso 6: Token sin firma
+invalid_cases["case6_no_signature"] = {
+    "jwt": jwt1.rsplit('.', 1)[0],  # Remover la firma
+    "secret": secret1,
+    "expected_valid": False
+}
+
+# Caso 7: Token con algoritmo diferente en header vs secreto usado
+invalid_cases["case7_wrong_algorithm"] = {
+    "jwt": jwt3,  # Token con HS384
+    "secret": secret3,
+    "expected_valid": True  # Este debería ser válido, pero lo probamos con secreto diferente
+}
+
+# ------------------------------
+# EJECUCIÓN DE PRUEBAS
+# ------------------------------
+
+def print_result(name, case, result):
+    print("\n========== RESULTADO:", name, "==========")
+    jwt_preview = case["jwt"][:60] + "..." if len(case["jwt"]) > 60 else case["jwt"]
+    print("JWT:", jwt_preview)
+    print("Secret:", case["secret"][:20] + "..." if len(case["secret"]) > 20 else case["secret"])
+    print("Valid:", result["valid"])
+    print("Expected Valid:", case["expected_valid"])
+    
+    if result["valid"]:
+        print("Algorithm:", result.get("algorithm", "N/A"))
+        print("Header:", result.get("header", {}))
+        print("Payload:", result.get("payload", {}))
+    else:
+        print("Error:", result.get("error", "Unknown error"))
+        if "algorithm" in result:
+            print("Algorithm:", result["algorithm"])
+        if "header" in result:
+            print("Header:", result["header"])
+    
+    # Verificar si el resultado coincide con lo esperado
+    if result["valid"] == case["expected_valid"]:
+        print("[OK] Resultado coincide con lo esperado")
+    else:
+        print("[ERROR] Resultado NO coincide con lo esperado!")
+
+print("\n=====================")
+print("PRUEBAS CON TOKENS VÁLIDOS (SE ESPERA QUE PASEN)")
+print("=====================")
+
+for name, case in valid_cases.items():
+    result = verify_jwt_signature(case["jwt"], case["secret"])
+    print_result(name, case, result)
+
+print("\n=====================")
+print("PRUEBAS CON ERRORES (SE ESPERA QUE FALLEN)")
+print("=====================")
+
+for name, case in invalid_cases.items():
+    result = verify_jwt_signature(case["jwt"], case["secret"])
+    print_result(name, case, result)
+

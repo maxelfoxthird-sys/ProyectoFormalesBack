@@ -1,0 +1,58 @@
+#esta es una guia rapida para llamar toda la DB con la que ya se creo con los jwt.
+
+from crud import obtener_todos
+#JWTS es el nombre de la coleccion en mongo atlas
+
+#Leer  todos los datos
+print("Contenido actual de JWTS:")
+jwts = obtener_todos("JWTS")
+for j in jwts:
+    print(j)
+
+#crear un registro nuevo
+
+"""
+
+from crud import insertar_uno
+
+nuevo = {
+    "token": "JWT_DE_PRUEBA_INSERTADO",
+    "valido": True
+}
+
+id_creado = insertar_uno("JWTS", nuevo)
+print("Insertado con ID:", id_creado)
+print("Vuelve a leer todos los datos para ver el cambio ")
+
+"""
+#actualzar un registro
+#el ID se lo asigna solo atlas si no tiene el registo.
+
+#id_creado = "6922a822e2ab17f9b9980fc4"  
+
+"""
+
+from crud import actualizar_por_id
+
+actualizar_por_id("JWTS", id_creado, {
+    "valido": False,
+    "motivo": "prueba de actualización"
+})
+
+print("Actualizado correctamente")
+"""
+
+
+#elimnar
+
+
+"""
+from crud import eliminar_por_id
+
+eliminar_por_id("JWTS", id_creado)
+print("Eliminado correctamente")
+
+
+
+
+"""
